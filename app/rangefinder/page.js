@@ -6,12 +6,14 @@ import { RosePark } from "@/app/data/courses"; // ✅ Import Course Data
 
 export default function RangeFinder() {
   const searchParams = useSearchParams();
-  const course = searchParams.get("course") || "RosePark"; // Default to RosePark
-  const [selectedHole, setSelectedHole] = useState(1);
+  const course = searchParams.get("course") || "RosePark"; // Default to Rose Park
+  const [selectedHole, setSelectedHole] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   const [distanceToFront, setDistanceToFront] = useState(null);
-  const [distanceToBack, setDistanceToBack] = useState(null);
   const [error, setError] = useState("");
+
+  // ✅ Extract holes correctly
+  const holes = RosePark.holes ? Object.keys(RosePark.holes).map(Number) : [];
 
   // 📡 Get user's GPS location
   useEffect(() => {
@@ -51,9 +53,9 @@ export default function RangeFinder() {
 
   // 🏌️ Update Distance Calculation
   useEffect(() => {
-    if (!userLocation) return;
+    if (!userLocation || !selectedHole) return;
 
-    const holeData = RosePark[selectedHole]; // Get hole data from RosePark
+    const holeData = RosePark.holes[selectedHole]; // ✅ Correctly access hole data
     if (!holeData) return;
 
     setDistanceToFront(
@@ -64,57 +66,48 @@ export default function RangeFinder() {
         holeData.front_green_lon
       )
     );
-
-    setDistanceToBack(
-      calculateDistance(
-        userLocation.latitude,
-        userLocation.longitude,
-        holeData.back_green_lat,
-        holeData.back_green_lon
-      )
-    );
   }, [selectedHole, userLocation]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
-      <h1 className="text-2xl font-bold mb-4">⛳ Range Finder - {course}</h1>
+      <h1 className="text-2xl font-bold mb-4">⛳ Range Finder - Rose Park</h1>
 
       {error ? (
         <p className="text-red-500">{error}</p>
       ) : (
         <>
-          {/* 🎯 Hole Selection */}
-          <label className="text-lg font-bold">Select Hole:</label>
-          <select
-            className="border p-2 rounded mt-2"
-            value={selectedHole}
-            onChange={(e) => setSelectedHole(Number(e.target.value))}
-          >
-            {Object.keys(RosePark).map((holeNumber) => (
-              <option key={holeNumber} value={holeNumber}>
+          {/* 🎯 Hole Selection List */}
+          <h2 className="text-lg font-bold">Select Hole:</h2>
+          <ul className="border rounded-lg p-2 mt-2 w-full max-w-md">
+            {holes.map((holeNumber) => (
+              <li
+                key={holeNumber}
+                className={`p-2 border-b last:border-none cursor-pointer ${
+                  selectedHole === holeNumber ? "bg-blue-500 text-white" : "hover:bg-gray-200"
+                }`}
+                onClick={() => setSelectedHole(holeNumber)}
+              >
                 Hole {holeNumber}
-              </option>
+              </li>
             ))}
-          </select>
+          </ul>
 
           {/* 📡 Live Distance Display */}
-          <div className="mt-4 border p-4 rounded shadow-lg w-full max-w-md text-center">
-            <h2 className="text-xl font-bold">Hole {selectedHole}</h2>
+          {selectedHole && (
+            <div className="mt-4 border p-4 rounded shadow-lg w-full max-w-md text-center">
+              <h2 className="text-xl font-bold">Hole {selectedHole}</h2>
 
-            {/* 📏 Distances */}
-            {userLocation && (
-              <>
+              {/* 📏 Distances */}
+              {userLocation ? (
                 <p>
                   📍 Distance to Front of Green:{" "}
-                  {distanceToFront !== null ? `${distanceToFront} yds` : "N/A"}
+                  {distanceToFront !== null ? `${distanceToFront} yds` : "Calculating..."}
                 </p>
-                <p>
-                  🎯 Distance to Back of Green:{" "}
-                  {distanceToBack !== null ? `${distanceToBack} yds` : "N/A"}
-                </p>
-              </>
-            )}
-          </div>
+              ) : (
+                <p>Waiting for GPS signal...</p>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>
